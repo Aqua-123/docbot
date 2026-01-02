@@ -1,0 +1,18 @@
+- [ ] be able to handle smaller tasks (edits, questions, etc.)
+- [x] fix logs panel (currently empty)
+- [ ] improve chat contents (tools calls, execution, tokens/usage)
+- [x] allow starting w/o prompt
+- [x] fix finishing, don't just abruptly stop
+- [x] improve docs.json editing and discovery
+- [x] make it executable
+- [x] add semantic search for code
+- [ ] improve plan validation ui + user-facing steps (plan, suggested media, follow-ups, ...)
+- [x] improve prompts to better use mintlify components, less undigestable prose, and allergy to bullet points
+- [x] move db files to temp directory
+- [x] disable j/k navigation in chat + q
+- [x] make models, provider configs, and other config easier to edit (docbot.config.ts/json?)
+- [ ] figure out how to make docbot use less tokens/usage
+- [x] fix section editing tool duplicating section title
+- [x] explain to docbot how to make better docs structure (e.g. split concepts into multiple pages, sublevels, etc.)
+- [ ] add a tool to retroactively add references to related docs
+- [ ] move changebot into docbot
