@@ -16,3 +16,11 @@
 - [x] explain to docbot how to make better docs structure (e.g. split concepts into multiple pages, sublevels, etc.)
 - [ ] add a tool to retroactively add references to related docs
 - [ ] move changebot into docbot
+- [ ] add discover/xray/plan mode to docbot
+- [ ] add embeddings share/import command
+- [ ] add fumadocs support
+- [ ] add nextra support
+- [ ] add docusaurus support
+- [ ] add session management (save/load/delete)
+- [ ] add compression/summarize of chats
+- [ ] add telemetry
