@@ -8,10 +8,16 @@ import { embedText } from "./embed"
  *
  * note: since the cohere reranker api isn't directly available,
  * we use embedding-based reranking instead
+ *
+ * @param query - The search query
+ * @param results - Search results to rerank
+ * @param embeddingModelId - The model ID for embeddings
+ * @param topN - Number of top results to return
  */
 export async function rerankResults(
   query: string,
   results: SearchResult[],
+  embeddingModelId: string,
   topN = 5,
 ): Promise<SearchResult[]> {
   if (results.length === 0) return []
@@ -20,12 +26,12 @@ export async function rerankResults(
   const start = performance.now()
 
   // embed the query
-  const queryEmbedding = await embedText(query)
+  const queryEmbedding = await embedText(query, embeddingModelId)
 
   // score each result by similarity to query
   const scored = await Promise.all(
     results.map(async (r) => {
-      const contentEmbedding = await embedText(r.content)
+      const contentEmbedding = await embedText(r.content, embeddingModelId)
       const similarity = cosineSimilarity(queryEmbedding, contentEmbedding)
       return { ...r, score: similarity }
     }),

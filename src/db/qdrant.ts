@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto"
 import { QdrantClient } from "@qdrant/qdrant-js"
-import { config } from "../config"
 import type { CodeChunk, DocChunk, SearchResult } from "../types"
 
 export type CollectionType = "docs" | "code"
@@ -18,28 +17,20 @@ function stringToUuid(str: string): string {
 }
 
 /**
- * get collection config by type (fallback to global config)
- */
-function getCollectionConfig(type: CollectionType) {
-  return config.qdrant.collections[type]
-}
-
-/**
  * initialize qdrant client and ensure collections exist
+ *
+ * @param url - Qdrant server URL
+ * @param collections - Collection names for docs and code
  */
 export async function initQdrant(
-  url = config.qdrant.url,
-  collections?: { docs: string; code: string },
+  url: string,
+  collections: { docs: string; code: string },
 ): Promise<QdrantClient> {
   const client = new QdrantClient({ url })
 
-  // use provided collection names or fall back to global config
-  const docsCollection = collections?.docs ?? getCollectionConfig("docs").name
-  const codeCollection = collections?.code ?? getCollectionConfig("code").name
-
   // ensure both collections exist
-  await ensureCollectionByName(client, docsCollection, "docs")
-  await ensureCollectionByName(client, codeCollection, "code")
+  await ensureCollectionByName(client, collections.docs, "docs")
+  await ensureCollectionByName(client, collections.code, "code")
 
   return client
 }
@@ -88,17 +79,19 @@ async function ensureCollectionByName(
 
 /**
  * upsert document chunks into a docs collection
+ *
+ * @param client - Qdrant client instance
+ * @param chunks - Document chunks to upsert
+ * @param collectionName - Name of the docs collection
  */
 export async function upsertDocChunks(
   client: QdrantClient,
   chunks: DocChunk[],
-  collectionName?: string,
+  collectionName: string,
 ): Promise<void> {
   if (chunks.length === 0) return
 
-  const name = collectionName ?? getCollectionConfig("docs").name
-
-  await client.upsert(name, {
+  await client.upsert(collectionName, {
     points: chunks.map((c) => ({
       id: stringToUuid(c.id),
       payload: {
@@ -115,17 +108,19 @@ export async function upsertDocChunks(
 
 /**
  * upsert code chunks into a code collection
+ *
+ * @param client - Qdrant client instance
+ * @param chunks - Code chunks to upsert
+ * @param collectionName - Name of the code collection
  */
 export async function upsertCodeChunks(
   client: QdrantClient,
   chunks: CodeChunk[],
-  collectionName?: string,
+  collectionName: string,
 ): Promise<void> {
   if (chunks.length === 0) return
 
-  const name = collectionName ?? getCollectionConfig("code").name
-
-  await client.upsert(name, {
+  await client.upsert(collectionName, {
     points: chunks.map((c) => ({
       id: stringToUuid(c.id),
       payload: {
@@ -146,17 +141,21 @@ export async function upsertCodeChunks(
 
 /**
  * search documents by vector similarity
+ *
+ * @param client - Qdrant client instance
+ * @param queryVector - Query embedding vector
+ * @param limit - Maximum number of results
+ * @param filter - Optional filter by path
+ * @param collectionName - Name of the docs collection
  */
 export async function searchDocs(
   client: QdrantClient,
   queryVector: number[],
-  limit = 5,
-  filter?: { path?: string },
-  collectionName?: string,
+  limit: number,
+  filter: { path?: string } | undefined,
+  collectionName: string,
 ): Promise<SearchResult[]> {
-  const name = collectionName ?? getCollectionConfig("docs").name
-
-  const results = await client.search(name, {
+  const results = await client.search(collectionName, {
     filter: filter?.path
       ? { must: [{ key: "path", match: { value: filter.path } }] }
       : undefined,
@@ -176,15 +175,20 @@ export async function searchDocs(
 
 /**
  * search code by vector similarity
+ *
+ * @param client - Qdrant client instance
+ * @param queryVector - Query embedding vector
+ * @param limit - Maximum number of results
+ * @param filter - Optional filter by path and/or language
+ * @param collectionName - Name of the code collection
  */
 export async function searchCode(
   client: QdrantClient,
   queryVector: number[],
-  limit = 5,
-  filter?: { path?: string; language?: string },
-  collectionName?: string,
+  limit: number,
+  filter: { path?: string; language?: string } | undefined,
+  collectionName: string,
 ): Promise<SearchResult[]> {
-  const name = collectionName ?? getCollectionConfig("code").name
 
   const must: Array<{ key: string; match: { value: string } }> = []
   if (filter?.path) {
@@ -194,7 +198,7 @@ export async function searchCode(
     must.push({ key: "language", match: { value: filter.language } })
   }
 
-  const results = await client.search(name, {
+  const results = await client.search(collectionName, {
     filter: must.length > 0 ? { must } : undefined,
     limit,
     vector: queryVector,
@@ -212,15 +216,17 @@ export async function searchCode(
 
 /**
  * delete all chunks for a specific document path
+ *
+ * @param client - Qdrant client instance
+ * @param path - Document path to delete chunks for
+ * @param collectionName - Name of the docs collection
  */
 export async function deleteDocChunks(
   client: QdrantClient,
   path: string,
-  collectionName?: string,
+  collectionName: string,
 ): Promise<void> {
-  const name = collectionName ?? getCollectionConfig("docs").name
-
-  await client.delete(name, {
+  await client.delete(collectionName, {
     filter: {
       must: [{ key: "path", match: { value: path } }],
     },
@@ -230,15 +236,17 @@ export async function deleteDocChunks(
 
 /**
  * delete all chunks for a specific code file path
+ *
+ * @param client - Qdrant client instance
+ * @param path - Code file path to delete chunks for
+ * @param collectionName - Name of the code collection
  */
 export async function deleteCodeChunks(
   client: QdrantClient,
   path: string,
-  collectionName?: string,
+  collectionName: string,
 ): Promise<void> {
-  const name = collectionName ?? getCollectionConfig("code").name
-
-  await client.delete(name, {
+  await client.delete(collectionName, {
     filter: {
       must: [{ key: "path", match: { value: path } }],
     },

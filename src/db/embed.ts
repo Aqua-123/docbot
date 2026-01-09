@@ -1,5 +1,4 @@
 import { embed, embedMany } from "ai"
-import { config } from "../config"
 import { logEmbed } from "../logger"
 
 // rough estimate: ~1.2 chars per token for code (very conservative)
@@ -62,12 +61,18 @@ function splitTextIntoChunks(text: string, maxChars: number): string[] {
 
 /**
  * embed a single text string
+ *
+ * @param text - The text to embed
+ * @param embeddingModelId - The model ID for embeddings (e.g., "openai/text-embedding-3-small")
  */
-export async function embedText(text: string): Promise<number[]> {
+export async function embedText(
+  text: string,
+  embeddingModelId: string,
+): Promise<number[]> {
   const start = performance.now()
 
   const { embedding } = await embed({
-    model: config.models.embedding,
+    model: embeddingModelId,
     value: text,
   })
 
@@ -93,15 +98,18 @@ function partitionTexts(texts: string[]) {
   return { normal, oversized }
 }
 
-async function embedValues(values: string[]) {
+async function embedValues(values: string[], embeddingModelId: string) {
   const { embeddings } = await embedMany({
-    model: config.models.embedding,
+    model: embeddingModelId,
     values,
   })
   return embeddings
 }
 
-async function embedOversizedTexts(oversized: string[]): Promise<number[][]> {
+async function embedOversizedTexts(
+  oversized: string[],
+  embeddingModelId: string,
+): Promise<number[][]> {
   const embeddings: number[][] = []
   const BATCH_SIZE = 50
 
@@ -109,7 +117,7 @@ async function embedOversizedTexts(oversized: string[]): Promise<number[][]> {
     const chunks = splitTextIntoChunks(text, MAX_CHARS_PER_TEXT)
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
       const batch = chunks.slice(i, i + BATCH_SIZE)
-      const batchEmbeddings = await embedValues(batch)
+      const batchEmbeddings = await embedValues(batch, embeddingModelId)
       embeddings.push(...batchEmbeddings)
     }
   }
@@ -117,7 +125,10 @@ async function embedOversizedTexts(oversized: string[]): Promise<number[][]> {
   return embeddings
 }
 
-async function embedTextsInBatches(texts: string[]): Promise<number[][]> {
+async function embedTextsInBatches(
+  texts: string[],
+  embeddingModelId: string,
+): Promise<number[][]> {
   const embeddings: number[][] = []
   let currentBatch: string[] = []
   let currentBatchChars = 0
@@ -130,16 +141,16 @@ async function embedTextsInBatches(texts: string[]): Promise<number[][]> {
 
     if (textChars > MAX_CHARS_PER_TEXT) {
       if (currentBatch.length > 0) {
-        embeddings.push(...(await embedValues(currentBatch)))
+        embeddings.push(...(await embedValues(currentBatch, embeddingModelId)))
         currentBatch = []
         currentBatchChars = 0
       }
-      embeddings.push(...(await embedValues([text])))
+      embeddings.push(...(await embedValues([text], embeddingModelId)))
       continue
     }
 
     if (currentBatch.length > 0 && (exceedsBatchLimit || batchNearlyFull)) {
-      embeddings.push(...(await embedValues(currentBatch)))
+      embeddings.push(...(await embedValues(currentBatch, embeddingModelId)))
       currentBatch = []
       currentBatchChars = 0
     }
@@ -149,7 +160,7 @@ async function embedTextsInBatches(texts: string[]): Promise<number[][]> {
   }
 
   if (currentBatch.length > 0) {
-    embeddings.push(...(await embedValues(currentBatch)))
+    embeddings.push(...(await embedValues(currentBatch, embeddingModelId)))
   }
 
   return embeddings
@@ -158,30 +169,40 @@ async function embedTextsInBatches(texts: string[]): Promise<number[][]> {
 async function embedNormalTexts(
   texts: string[],
   existingEmbeddings: number[][],
+  embeddingModelId: string,
 ) {
   const totalChars = texts.reduce((sum, t) => sum + t.length, 0)
   if (totalChars <= MAX_CHARS_PER_BATCH) {
-    const embeddings = await embedValues(texts)
+    const embeddings = await embedValues(texts, embeddingModelId)
     return [...existingEmbeddings, ...embeddings]
   }
 
-  const batchEmbeddings = await embedTextsInBatches(texts)
+  const batchEmbeddings = await embedTextsInBatches(texts, embeddingModelId)
   return [...existingEmbeddings, ...batchEmbeddings]
 }
 
 /**
  * embed multiple text strings in batches, respecting token limits
+ *
+ * @param texts - Array of texts to embed
+ * @param embeddingModelId - The model ID for embeddings (e.g., "openai/text-embedding-3-small")
  */
-export async function embedTexts(texts: string[]): Promise<number[][]> {
+export async function embedTexts(
+  texts: string[],
+  embeddingModelId: string,
+): Promise<number[][]> {
   if (texts.length === 0) return []
 
   const start = performance.now()
   const { normal, oversized } = partitionTexts(texts)
-  const oversizedEmbeddings = await embedOversizedTexts(oversized)
+  const oversizedEmbeddings = await embedOversizedTexts(
+    oversized,
+    embeddingModelId,
+  )
   const finalEmbeddings =
     normal.length === 0
       ? oversizedEmbeddings
-      : await embedNormalTexts(normal, oversizedEmbeddings)
+      : await embedNormalTexts(normal, oversizedEmbeddings, embeddingModelId)
 
   const totalChars = texts.reduce((sum, t) => sum + t.length, 0)
   logEmbed(
