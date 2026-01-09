@@ -270,7 +270,8 @@ Note: Ensure you have an embedding model available in Ollama (e.g., `ollama pull
     "planning": "lmstudio/loaded-model",
     "prose": "lmstudio/loaded-model",
     "fast": "lmstudio/loaded-model",
-    "nano": "lmstudio/loaded-model"
+    "nano": "lmstudio/loaded-model",
+    "embedding": "lmstudio/loaded-model"
   }
 }
 ```
@@ -294,7 +295,8 @@ Note: Ensure you have an embedding model available in Ollama (e.g., `ollama pull
     "planning": "myapi/my-model",
     "prose": "myapi/my-model",
     "fast": "myapi/my-model",
-    "nano": "myapi/my-model"
+    "nano": "myapi/my-model",
+    "embedding": "myapi/my-model"
   }
 }
 ```
