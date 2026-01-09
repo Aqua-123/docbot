@@ -5,7 +5,8 @@ import type { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google"
 import type { OpenAIResponsesProviderOptions } from "@ai-sdk/openai"
 import type { ProviderOptions } from "@ai-sdk/provider-utils"
 import type { LanguageModel, RerankingModel } from "ai"
-import { gateway, wrapLanguageModel } from "ai"
+import { wrapLanguageModel } from "ai"
+import { getModel, initializeProviders } from "./config/providers"
 import type { ResolvedConfig } from "./config/schema"
 
 const withDevTools = (
@@ -61,6 +62,10 @@ export interface RuntimeConfig {
  * create runtime configuration with actual model instances from resolved config
  */
 export function createRuntimeConfig(resolved: ResolvedConfig): RuntimeConfig {
+  // Initialize the provider registry with user-configured providers
+  // This determines whether to use gateway (default) or native providers
+  initializeProviders(resolved.providers)
+
   return {
     agents: {
       discoveryBudget: resolved.agents.discoveryBudget,
@@ -159,14 +164,14 @@ export function createRuntimeConfig(resolved: ResolvedConfig): RuntimeConfig {
       },
     },
     models: {
-      context: withDevTools(gateway(resolved.models.context)),
+      context: withDevTools(getModel(resolved.models.context)),
       embedding: resolved.models.embedding,
       embeddingLarge: resolved.models.embeddingLarge,
-      fast: withDevTools(gateway(resolved.models.fast)),
-      nano: withDevTools(gateway(resolved.models.nano)),
-      planning: withDevTools(gateway(resolved.models.planning)),
-      planningHeavy: withDevTools(gateway(resolved.models.planningHeavy)),
-      prose: withDevTools(gateway(resolved.models.prose)),
+      fast: withDevTools(getModel(resolved.models.fast)),
+      nano: withDevTools(getModel(resolved.models.nano)),
+      planning: withDevTools(getModel(resolved.models.planning)),
+      planningHeavy: withDevTools(getModel(resolved.models.planningHeavy)),
+      prose: withDevTools(getModel(resolved.models.prose)),
       reranker: cohere.reranking("rerank-v3.5"),
     },
 
@@ -204,125 +209,4 @@ export {
 } from "./config/loader"
 export type { DocbotUserConfig, ResolvedConfig } from "./config/schema"
 
-// legacy config export for backward compatibility during migration
-// commands should migrate to using createRuntimeConfig(resolvedConfig)
-import {
-  DEFAULT_AGENTS,
-  DEFAULT_MODELS,
-  DEFAULT_QDRANT_URL,
-  DEFAULT_SERVER_PORT,
-} from "./config/defaults"
 
-export const config: RuntimeConfig = {
-  agents: {
-    discoveryBudget: DEFAULT_AGENTS.discoveryBudget,
-
-    runtime: {
-      orchestrator: {
-        maxRetries: 3,
-        providerOptions: {
-          anthropic: {
-            effort: "medium",
-            sendReasoning: false,
-          } satisfies AnthropicProviderOptions,
-          gateway: {
-            models: [
-              DEFAULT_MODELS.planning,
-              DEFAULT_MODELS.prose,
-              DEFAULT_MODELS.context,
-            ],
-          },
-          google: {
-            thinkingConfig: {
-              includeThoughts: true,
-              thinkingLevel: "medium",
-            },
-          } satisfies GoogleGenerativeAIProviderOptions,
-        } satisfies ProviderOptions,
-      },
-
-      planner: {
-        maxRetries: 3,
-        providerOptions: {
-          gateway: {
-            models: [DEFAULT_MODELS.planning, DEFAULT_MODELS.prose],
-          },
-          openai: {
-            reasoningEffort: "medium",
-            textVerbosity: "low",
-          } satisfies OpenAIResponsesProviderOptions,
-        } satisfies ProviderOptions,
-      },
-
-      research: {
-        maxRetries: 3,
-        providerOptions: {
-          gateway: {
-            models: [DEFAULT_MODELS.fast, DEFAULT_MODELS.nano],
-          },
-        } satisfies ProviderOptions,
-      },
-
-      userInteraction: {
-        maxRetries: 3,
-        providerOptions: {
-          gateway: {
-            models: [DEFAULT_MODELS.fast, DEFAULT_MODELS.nano],
-          },
-        } satisfies ProviderOptions,
-      },
-
-      writer: {
-        maxRetries: 3,
-        providerOptions: {
-          anthropic: {
-            effort: "medium",
-            sendReasoning: false,
-          } satisfies AnthropicProviderOptions,
-          gateway: {
-            models: [
-              DEFAULT_MODELS.prose,
-              DEFAULT_MODELS.fast,
-              DEFAULT_MODELS.context,
-              DEFAULT_MODELS.planningHeavy,
-            ],
-          },
-          google: {
-            thinkingConfig: {
-              includeThoughts: true,
-              thinkingLevel: "medium",
-            },
-          } satisfies GoogleGenerativeAIProviderOptions,
-          openai: {
-            reasoningEffort: "high",
-            textVerbosity: "low",
-          } satisfies OpenAIResponsesProviderOptions,
-        } satisfies ProviderOptions,
-      },
-    },
-  },
-  models: {
-    context: withDevTools(gateway(DEFAULT_MODELS.context)),
-    embedding: DEFAULT_MODELS.embedding as string,
-    embeddingLarge: DEFAULT_MODELS.embeddingLarge as string,
-    fast: withDevTools(gateway(DEFAULT_MODELS.fast)),
-    nano: withDevTools(gateway(DEFAULT_MODELS.nano)),
-    planning: withDevTools(gateway(DEFAULT_MODELS.planning)),
-    planningHeavy: withDevTools(gateway(DEFAULT_MODELS.planningHeavy)),
-    prose: withDevTools(gateway(DEFAULT_MODELS.prose)),
-    reranker: cohere.reranking("rerank-v3.5"),
-  },
-
-  qdrant: {
-    collections: {
-      code: { name: "docbot_code", vectorSize: 1536 },
-      docs: { name: "docbot_docs", vectorSize: 1536 },
-    },
-    manifestPath: process.env.DOCBOT_MANIFEST_PATH ?? ".docbot/manifest.json",
-    url: process.env.QDRANT_URL ?? DEFAULT_QDRANT_URL,
-  },
-
-  server: {
-    port: Number(process.env.DOCBOT_PORT) || DEFAULT_SERVER_PORT,
-  },
-}
