@@ -1,6 +1,7 @@
+import type { ProviderOptions } from "@ai-sdk/provider-utils"
+import type { LanguageModel } from "ai"
 import { stepCountIs, ToolLoopAgent, type ToolSet } from "ai"
 import type { Blackboard } from "../blackboard"
-import { config } from "../config"
 import type { BlackboardTools } from "../tools/blackboard"
 import type { DocTools } from "../tools/docs"
 import type { InteractionTools } from "../tools/interaction"
@@ -127,20 +128,25 @@ export type WriterAgentTools = DocTools &
     | "mark_writing_complete"
   >
 
+export interface WriterAgentConfig {
+  model: LanguageModel
+  maxRetries: number
+  providerOptions?: ProviderOptions
+}
+
 /**
  * create the writer agent that writes quality documentation
  */
 export function createWriterAgent(
   _blackboard: Blackboard,
   tools: WriterAgentTools,
+  config: WriterAgentConfig,
 ) {
-  const runtime = config.agents.runtime.writer
-
   return new ToolLoopAgent({
     instructions: WRITER_SYSTEM_PROMPT, // expensive model for quality prose
-    maxRetries: runtime.maxRetries,
-    model: config.models.prose,
-    providerOptions: runtime.providerOptions,
+    maxRetries: config.maxRetries,
+    model: config.model,
+    providerOptions: config.providerOptions,
     stopWhen: [
       hasToolCall("mark_writing_complete"),
       stepCountIs(20), // safety net

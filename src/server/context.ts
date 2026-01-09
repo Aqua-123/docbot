@@ -1,4 +1,5 @@
 import type { QdrantClient } from "@qdrant/qdrant-js"
+import type { RuntimeConfig } from "../config"
 import type { CodeIndex } from "../index/code-index"
 import type { DocIndex } from "../index/doc-index"
 import type { ServerContext } from "../types"
@@ -10,12 +11,14 @@ export interface AppContext extends ServerContext {
   qdrantClient: QdrantClient
   docIndex: DocIndex
   codeIndex: CodeIndex
+  runtimeConfig: RuntimeConfig
 }
 
 /**
  * create a context object to pass through routes
  */
 export function createAppContext(
+  runtimeConfig: RuntimeConfig,
   qdrantClient: QdrantClient,
   docIndex: DocIndex,
   codeIndex: CodeIndex,
@@ -34,5 +37,6 @@ export function createAppContext(
     interactive: options.interactive,
     qdrantClient,
     qdrantUrl: options.qdrantUrl,
+    runtimeConfig,
   }
 }

@@ -1,6 +1,7 @@
+import type { ProviderOptions } from "@ai-sdk/provider-utils"
+import type { LanguageModel } from "ai"
 import { stepCountIs, ToolLoopAgent, type ToolSet } from "ai"
 import type { Blackboard } from "../blackboard"
-import { config } from "../config"
 import type { BlackboardTools } from "../tools/blackboard"
 import type { DocTools } from "../tools/docs"
 import { hasToolCall } from "./helpers"
@@ -108,20 +109,25 @@ export type PlannerAgentTools = DocTools &
     | "submit_plan"
   >
 
+export interface PlannerAgentConfig {
+  model: LanguageModel
+  maxRetries: number
+  providerOptions?: ProviderOptions
+}
+
 /**
  * create the planner agent that creates documentation plans
  */
 export function createPlannerAgent(
   _blackboard: Blackboard,
   tools: PlannerAgentTools,
+  config: PlannerAgentConfig,
 ) {
-  const runtime = config.agents.runtime.planner
-
   return new ToolLoopAgent({
     instructions: PLANNER_SYSTEM_PROMPT, // mid-tier model for structure creation
-    maxRetries: runtime.maxRetries,
-    model: config.models.fast,
-    providerOptions: runtime.providerOptions,
+    maxRetries: config.maxRetries,
+    model: config.model,
+    providerOptions: config.providerOptions,
     stopWhen: [
       hasToolCall("submit_plan"),
       stepCountIs(12), // safety net

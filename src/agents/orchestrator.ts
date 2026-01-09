@@ -2,7 +2,7 @@ import { stepCountIs, ToolLoopAgent, type ToolSet } from "ai"
 import { z } from "zod"
 import type { Blackboard } from "../blackboard"
 import type { SessionSummary } from "../blackboard/types"
-import { config } from "../config"
+import type { RuntimeConfig } from "../config"
 import { createBlackboardTools } from "../tools/blackboard"
 import type { CodebaseTools } from "../tools/codebase"
 import type { DocTools } from "../tools/docs"
@@ -121,6 +121,7 @@ export function createOrchestratorAgent(
     codebaseTools: Partial<CodebaseTools>
     interactionTools: InteractionTools
   },
+  runtimeConfig: RuntimeConfig,
 ) {
   const systemPrompt = buildSystemPrompt(context)
 
@@ -147,10 +148,27 @@ export function createOrchestratorAgent(
     ...blackboardTools,
   }
 
-  const researchAgent = createResearchAgent(blackboard, researchTools)
-  const plannerAgent = createPlannerAgent(blackboard, plannerTools)
-  const writerAgent = createWriterAgent(blackboard, writerTools)
-  const userAgent = createUserAgent(blackboard, userTools)
+  // Create sub-agents with injected config
+  const researchAgent = createResearchAgent(blackboard, researchTools, {
+    maxRetries: runtimeConfig.agents.runtime.research.maxRetries,
+    model: runtimeConfig.models.fast,
+    providerOptions: runtimeConfig.agents.runtime.research.providerOptions,
+  })
+  const plannerAgent = createPlannerAgent(blackboard, plannerTools, {
+    maxRetries: runtimeConfig.agents.runtime.planner.maxRetries,
+    model: runtimeConfig.models.fast,
+    providerOptions: runtimeConfig.agents.runtime.planner.providerOptions,
+  })
+  const writerAgent = createWriterAgent(blackboard, writerTools, {
+    maxRetries: runtimeConfig.agents.runtime.writer.maxRetries,
+    model: runtimeConfig.models.prose,
+    providerOptions: runtimeConfig.agents.runtime.writer.providerOptions,
+  })
+  const userAgent = createUserAgent(blackboard, userTools, {
+    maxRetries: runtimeConfig.agents.runtime.userInteraction.maxRetries,
+    model: runtimeConfig.models.fast,
+    providerOptions: runtimeConfig.agents.runtime.userInteraction.providerOptions,
+  })
 
   const orchestratorTools = {
     ...createWorkflowTools(),
@@ -408,12 +426,12 @@ export function createOrchestratorAgent(
     },
   }
 
-  const runtime = config.agents.runtime.orchestrator
+  const runtime = runtimeConfig.agents.runtime.orchestrator
 
   const agent = new ToolLoopAgent({
     instructions: systemPrompt,
     maxRetries: runtime.maxRetries,
-    model: config.models.planning,
+    model: runtimeConfig.models.planning,
 
     prepareStep: ({ messages }) => {
       // inject current session state at every step so the orchestrator

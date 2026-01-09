@@ -1,6 +1,7 @@
+import type { ProviderOptions } from "@ai-sdk/provider-utils"
+import type { LanguageModel } from "ai"
 import { stepCountIs, ToolLoopAgent, type ToolSet } from "ai"
 import type { Blackboard } from "../blackboard"
-import { config } from "../config"
 import type { BlackboardTools } from "../tools/blackboard"
 import type { InteractionTools } from "../tools/interaction"
 import { hasToolCall } from "./helpers"
@@ -41,20 +42,25 @@ export type UserAgentTools = InteractionTools &
     blackboard_read_summary?: SessionSummaryTool
   }
 
+export interface UserAgentConfig {
+  model: LanguageModel
+  maxRetries: number
+  providerOptions?: ProviderOptions
+}
+
 /**
  * create the user interaction agent for formatting and getting user input
  */
 export function createUserAgent(
   _blackboard: Blackboard,
   tools: UserAgentTools,
+  config: UserAgentConfig,
 ) {
-  const runtime = config.agents.runtime.userInteraction
-
   return new ToolLoopAgent({
     instructions: USER_INTERACTION_SYSTEM_PROMPT, // cheap model for simple formatting
-    maxRetries: runtime.maxRetries,
-    model: config.models.fast,
-    providerOptions: runtime.providerOptions,
+    maxRetries: config.maxRetries,
+    model: config.model,
+    providerOptions: config.providerOptions,
     stopWhen: [
       hasToolCall("mark_interaction_complete"),
       stepCountIs(10), // safety net

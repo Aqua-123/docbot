@@ -1,6 +1,5 @@
 import { generateObject } from "ai"
 import { Elysia, t } from "elysia"
-import { config } from "../../config"
 import { logElysia } from "../../logger"
 import { documentationPlanSchema } from "../../types"
 import type { AppContext } from "../context"
@@ -8,7 +7,7 @@ import type { AppContext } from "../context"
 /**
  * plan route for structured plan generation
  */
-export function createPlanRoute(_ctx: AppContext) {
+export function createPlanRoute(ctx: AppContext) {
   logElysia("info", "plan route initialized", { route: "/api/plan" })
 
   return new Elysia().post(
@@ -37,7 +36,7 @@ Include dependencies between operations when one must complete before another.`
 
       try {
         const result = await generateObject({
-          model: config.models.planning,
+          model: ctx.runtimeConfig.models.planning,
           prompt,
           schema: documentationPlanSchema,
         })

@@ -1,6 +1,7 @@
+import type { ProviderOptions } from "@ai-sdk/provider-utils"
+import type { LanguageModel } from "ai"
 import { stepCountIs, ToolLoopAgent, type ToolSet } from "ai"
 import type { Blackboard } from "../blackboard"
-import { config } from "../config"
 import type { BlackboardTools } from "../tools/blackboard"
 import type { CodebaseTools } from "../tools/codebase"
 import type { DocTools } from "../tools/docs"
@@ -62,20 +63,25 @@ export type ResearchAgentTools = DocTools &
     | "mark_research_complete"
   >
 
+export interface ResearchAgentConfig {
+  model: LanguageModel
+  maxRetries: number
+  providerOptions?: ProviderOptions
+}
+
 /**
  * create the research agent that finds and filters information
  */
 export function createResearchAgent(
   _blackboard: Blackboard,
   tools: ResearchAgentTools,
+  config: ResearchAgentConfig,
 ) {
-  const runtime = config.agents.runtime.research
-
   return new ToolLoopAgent({
     instructions: RESEARCH_SYSTEM_PROMPT, // cheap model for high-volume reading
-    maxRetries: runtime.maxRetries,
-    model: config.models.fast,
-    providerOptions: runtime.providerOptions,
+    maxRetries: config.maxRetries,
+    model: config.model,
+    providerOptions: config.providerOptions,
     stopWhen: [
       hasToolCall("mark_research_complete"),
       stepCountIs(15), // safety net
