@@ -20,6 +20,15 @@ export {
 export type { DocbotUserConfig, ResolvedConfig } from "./schema"
 export { docbotConfigSchema } from "./schema"
 
+// Provider exports for user configuration
+export {
+  NATIVE_PROVIDERS,
+  type NativeProviderName,
+  type NativeProviderConfig,
+  type OpenAICompatibleProviderConfig,
+  type ProviderConfig,
+} from "./providers"
+
 /**
  * helper for defining a typed config file
  *

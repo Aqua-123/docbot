@@ -1,9 +1,31 @@
 import { z } from "zod"
+import { NATIVE_PROVIDERS } from "./providers/constants"
+import type { ProviderConfig } from "./providers/types"
 
 // model identifier (e.g. "openai/gpt-5.2", "anthropic/claude-sonnet-4.5")
 const modelIdSchema = z.string().regex(/^[\w-]+\/[\w.-]+$/, {
   message: "model id must be in format 'provider/model-name'",
 })
+
+// Provider configuration schemas
+const openaiCompatibleProviderSchema = z.object({
+  type: z.literal("openai-compatible"),
+  name: z.string().min(1, { message: "Provider name is required" }),
+  baseURL: z.url({ message: "Must be a valid URL" }),
+  apiKey: z.string().optional(),
+  headers: z.record(z.string(), z.string()).optional(),
+})
+
+const nativeProviderSchema = z.object({
+  type: z.enum(NATIVE_PROVIDERS as unknown as [string, ...string[]]),
+  apiKey: z.string().optional(),
+  baseURL: z.url().optional(),
+})
+
+const providerSchema = z.discriminatedUnion("type", [
+  openaiCompatibleProviderSchema,
+  nativeProviderSchema,
+])
 
 export const docbotConfigSchema = z.object({
   // agent behavior settings
@@ -34,9 +56,16 @@ export const docbotConfigSchema = z.object({
       docs: z.string().optional(),
     })
     .optional(),
+
   // project identifier used for collection naming
   // defaults to sanitized package.json name
   projectSlug: z.string().optional(),
+
+  // provider configuration
+  // Configure custom providers or override native provider settings
+  // If not specified, uses Vercel AI Gateway (default)
+  // If any provider is specified, uses native providers directly
+  providers: z.array(providerSchema).optional(),
 
   // qdrant configuration
   qdrant: z
@@ -99,4 +128,5 @@ export interface ResolvedConfig {
     docs?: string
     codebase?: string[]
   }
+  providers: ProviderConfig[]
 }

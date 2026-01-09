@@ -9,6 +9,7 @@ import {
   makeCollectionNames,
   sanitizeSlug,
 } from "./defaults"
+import type { ProviderConfig } from "./providers/types"
 import {
   type DocbotUserConfig,
   docbotConfigSchema,
@@ -251,6 +252,14 @@ function resolveServerConfig(
 }
 
 /**
+ * Resolve provider configuration
+ * Returns empty array if no providers configured (uses gateway by default)
+ */
+function resolveProviders(userConfig: DocbotUserConfig): ProviderConfig[] {
+  return (userConfig.providers as ProviderConfig[]) ?? []
+}
+
+/**
  * load and resolve the full configuration
  *
  * priority: cli args > config file > defaults
@@ -272,6 +281,7 @@ export async function loadConfig(
     models: resolveModelConfig(userConfig),
     paths,
     projectSlug: slug,
+    providers: resolveProviders(userConfig),
     qdrant: resolveQdrantConfig(
       userConfig,
       slug,
