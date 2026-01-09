@@ -28,7 +28,8 @@ export class DocIndex {
   constructor(
     private client: QdrantClient,
     private docsPath: string,
-    private collectionName?: string,
+    private collectionName: string,
+    private embeddingModelId: string,
   ) {}
 
   /**
@@ -203,7 +204,7 @@ export class DocIndex {
     const embeddings = await timed(
       "embed",
       `embedding ${chunks.length} chunks from ${relativePath}`,
-      () => embedTexts(texts),
+      () => embedTexts(texts, this.embeddingModelId),
     )
 
     // add vectors to chunks
@@ -229,7 +230,14 @@ export class DocIndex {
     filter?: { path?: string },
   ): Promise<SearchResult[]> {
     logInfo(`semantic search: "${query.slice(0, 50)}..."`)
-    return vectorSearch(this.client, query, limit, filter, this.collectionName)
+    return vectorSearch(
+      this.client,
+      query,
+      this.embeddingModelId,
+      limit,
+      filter,
+      this.collectionName,
+    )
   }
 
   /**
@@ -250,7 +258,7 @@ export class DocIndex {
     const vectorResults = await this.semanticSearch(query, limit * 2)
 
     // rerank with embedding similarity
-    return rerankResults(query, vectorResults, limit)
+    return rerankResults(query, vectorResults, this.embeddingModelId, limit)
   }
 
   /**
@@ -264,6 +272,7 @@ export class DocIndex {
     return findSimilar(
       this.client,
       content,
+      this.embeddingModelId,
       limit,
       excludePath,
       this.collectionName,
@@ -278,7 +287,7 @@ export class DocIndex {
     results: SearchResult[],
     limit = 5,
   ): Promise<SearchResult[]> {
-    return rerankResults(query, results, limit)
+    return rerankResults(query, results, this.embeddingModelId, limit)
   }
 
   /**

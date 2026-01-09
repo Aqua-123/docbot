@@ -6,19 +6,27 @@ import type { SearchResult } from "../types"
 
 /**
  * perform semantic search using qdrant vector database
+ *
+ * @param client - Qdrant client instance
+ * @param query - Search query string
+ * @param embeddingModelId - The model ID for embeddings
+ * @param limit - Maximum number of results
+ * @param filter - Optional filter by path
+ * @param collectionName - Name of the docs collection
  */
 export async function vectorSearch(
   client: QdrantClient,
   query: string,
-  limit = 5,
-  filter?: { path?: string },
-  collectionName?: string,
+  embeddingModelId: string,
+  limit: number,
+  filter: { path?: string } | undefined,
+  collectionName: string,
 ): Promise<SearchResult[]> {
   // embed the query
   const queryVector = await timed(
     "embed",
     `embedding query "${query.slice(0, 50)}..."`,
-    () => embedText(query),
+    () => embedText(query, embeddingModelId),
   )
 
   // search qdrant
@@ -32,18 +40,26 @@ export async function vectorSearch(
 
 /**
  * find similar documents to a given document
+ *
+ * @param client - Qdrant client instance
+ * @param content - Content to find similar documents for
+ * @param embeddingModelId - The model ID for embeddings
+ * @param limit - Maximum number of results
+ * @param excludePath - Optional path to exclude from results
+ * @param collectionName - Name of the docs collection
  */
 export async function findSimilar(
   client: QdrantClient,
   content: string,
-  limit = 5,
-  excludePath?: string,
-  collectionName?: string,
+  embeddingModelId: string,
+  limit: number,
+  excludePath: string | undefined,
+  collectionName: string,
 ): Promise<SearchResult[]> {
   const queryVector = await timed(
     "embed",
     `embedding content (${content.length} chars)`,
-    () => embedText(content),
+    () => embedText(content, embeddingModelId),
   )
 
   const results = await timed("qdrant", `finding ${limit} similar docs`, () =>

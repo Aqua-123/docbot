@@ -101,8 +101,9 @@ export class CodeIndex {
   constructor(
     private client: QdrantClient,
     private codebasePaths: string[],
+    private collectionName: string,
+    private embeddingModelId: string,
     private docsPath?: string,
-    private collectionName?: string,
   ) {}
 
   /**
@@ -324,7 +325,7 @@ export class CodeIndex {
       const embeddings = await timed(
         "embed",
         `embedding ${chunks.length} line chunks from ${relativePath}`,
-        () => embedTexts(texts),
+        () => embedTexts(texts, this.embeddingModelId),
       )
 
       const chunksWithVectors: CodeChunk[] = chunks.map((chunk, i) => ({
@@ -357,7 +358,7 @@ export class CodeIndex {
     const embeddings = await timed(
       "embed",
       `embedding ${chunks.length} symbols from ${relativePath}`,
-      () => embedTexts(texts),
+      () => embedTexts(texts, this.embeddingModelId),
     )
 
     const chunksWithVectors: CodeChunk[] = chunks.map((chunk, i) => ({
@@ -587,7 +588,7 @@ export class CodeIndex {
     const queryVector = await timed(
       "embed",
       `embedding code query "${query.slice(0, 50)}..."`,
-      () => embedText(query),
+      () => embedText(query, this.embeddingModelId),
     )
 
     const results = await timed(
@@ -678,7 +679,7 @@ export class CodeIndex {
   async hybridSearch(query: string, limit = 5): Promise<SearchResult[]> {
     logInfo(`code hybrid search: "${query.slice(0, 50)}..."`)
     const semanticResults = await this.semanticSearch(query, limit * 2)
-    return rerankResults(query, semanticResults, limit)
+    return rerankResults(query, semanticResults, this.embeddingModelId, limit)
   }
 
   /**
