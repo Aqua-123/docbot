@@ -57,7 +57,7 @@ Required:
 - [Bun](https://bun.sh)
 - [Qdrant](https://qdrant.tech) (local via Docker or remote - `docbot init` will set you up with a local instance via Docker)
 - `rg` (ripgrep) for fast exact-match search
-- `AI_GATEWAY_API_KEY` (Vercel AI Gateway)
+- API key for your chosen provider (see [Provider Configuration](#provider-configuration))
 
 ## How It Works
 
@@ -72,7 +72,7 @@ Docbot is opinionated so we were able to build it fast, but it's not meant to st
 
 - **Docs frameworks**: Today Docbot targets MDX-based doc sites and detects Mintlify project structure automatically (as long as you use `docs.json`). Mintlify was the first target because that's what we use at Helm; support will expand (custom MDX, Fumadocs, Nextra, Docusaurus, etc.). It's just a matter of tweaking the tools and prompts.
 - **Vector store**: Currently Qdrant (required). It's easy to run locally and does the job well. This may evolve as CI/multi-user needs grow.
-- **Models/provider**: Currently Vercel AI Gateway via `AI_GATEWAY_API_KEY`. Adding other providers is planned - you can use configure the models in the config file though.
+- **Models/provider**: Defaults to Vercel AI Gateway (`AI_GATEWAY_API_KEY`). Alternatively, configure native providers (OpenAI, Anthropic, Google, Groq) or any OpenAI-compatible endpoint (LM Studio, Ollama, vLLM, self-hosted models). See [Provider Configuration](#provider-configuration).
 - **Bun**: Required. Will not change.
 
 ## Commands
@@ -165,25 +165,167 @@ Example:
     "codebase": ["./apps/web", "./packages/shared"]
   },
   "qdrant": {
-    "url": "http://127.0.0.1:6333",
-    "manifestPath": ".docbot/manifest.json",
-    "collections": {
-      "docs": "docbot_my-project_docs",
-      "code": "docbot_my-project_code"
-    }
+    "url": "http://127.0.0.1:6333"
   },
   "server": { "port": 3070 },
   "models": {
     "planning": "openai/gpt-5.2",
     "prose": "anthropic/claude-sonnet-4.5",
-    "fast": "anthropic/claude-haiku-4.5",
-    "embedding": "openai/text-embedding-3-small",
-    "reranker": "cohere/rerank-v3.5"
+    "fast": "openai/gpt-5.2",
+    "nano": "google/gemini-3-flash",
+    "embedding": "openai/text-embedding-3-small"
   }
 }
 ```
 
-CLI flags take precedence over the config file.
+CLI flags take precedence over the config file. See [Provider Configuration](#provider-configuration) for setting up different LLM providers.
+
+## Provider Configuration
+
+Docbot supports multiple LLM providers. By default, it uses Vercel AI Gateway. You can configure native providers or custom OpenAI-compatible endpoints.
+
+### Default: Vercel AI Gateway
+
+When no `providers` are configured, Docbot uses Vercel AI Gateway. Set your API key:
+
+```bash
+export AI_GATEWAY_API_KEY=your-gateway-key
+```
+
+### Native Providers
+
+Configure native providers (OpenAI, Anthropic, Google, Groq) by adding them to the `providers` array. When any provider is configured, Docbot switches from gateway mode to native mode.
+
+**Environment Variables:**
+
+| Provider | Environment Variable |
+|----------|---------------------|
+| OpenAI | `OPENAI_API_KEY` |
+| Anthropic | `ANTHROPIC_API_KEY` |
+| Google | `GOOGLE_GENERATIVE_AI_API_KEY` |
+| Groq | `GROQ_API_KEY` |
+
+**Example: Using OpenAI and Anthropic directly**
+
+```jsonc
+{
+  "providers": [
+    { "type": "openai" },
+    { "type": "anthropic" }
+  ],
+  "models": {
+    "planning": "openai/gpt-5.2",
+    "prose": "anthropic/claude-sonnet-4.5",
+    "fast": "openai/gpt-5.2",
+    "nano": "google/gemini-3-flash",
+    "embedding": "openai/text-embedding-3-small"
+  }
+}
+```
+
+```bash
+export OPENAI_API_KEY=sk-...
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### OpenAI-Compatible Endpoints
+
+Use any OpenAI-compatible API (Ollama, LM Studio, vLLM, self-hosted models) with the `openai-compatible` provider type.
+
+**Example: Ollama (local)**
+
+Note: Ensure you have an embedding model available in Ollama (e.g., `ollama pull nomic-embed-text`).
+
+```jsonc
+{
+  "providers": [
+    {
+      "type": "openai-compatible",
+      "name": "ollama",
+      "baseURL": "http://localhost:11434/v1"
+    }
+  ],
+  "models": {
+    "planning": "ollama/llama3.1:70b",
+    "prose": "ollama/llama3.1:70b",
+    "fast": "ollama/llama3.1:8b",
+    "nano": "ollama/llama3.1:8b",
+    "embedding": "ollama/nomic-embed-text"
+  }
+}
+```
+
+**Example: LM Studio**
+
+```jsonc
+{
+  "providers": [
+    {
+      "type": "openai-compatible",
+      "name": "lmstudio",
+      "baseURL": "http://localhost:1234/v1"
+    }
+  ],
+  "models": {
+    "planning": "lmstudio/loaded-model",
+    "prose": "lmstudio/loaded-model",
+    "fast": "lmstudio/loaded-model",
+    "nano": "lmstudio/loaded-model"
+  }
+}
+```
+
+**Example: Custom API with authentication**
+
+```jsonc
+{
+  "providers": [
+    {
+      "type": "openai-compatible",
+      "name": "myapi",
+      "baseURL": "https://api.example.com/v1",
+      "apiKey": "your-api-key",
+      "headers": {
+        "X-Custom-Header": "value"
+      }
+    }
+  ],
+  "models": {
+    "planning": "myapi/my-model",
+    "prose": "myapi/my-model",
+    "fast": "myapi/my-model",
+    "nano": "myapi/my-model"
+  }
+}
+```
+
+### Mixing Providers
+
+You can combine native providers with custom endpoints:
+
+```jsonc
+{
+  "providers": [
+    { "type": "openai" },
+    {
+      "type": "openai-compatible",
+      "name": "ollama",
+      "baseURL": "http://localhost:11434/v1"
+    }
+  ],
+  "models": {
+    "planning": "openai/gpt-5.2",
+    "prose": "openai/gpt-5.2",
+    "fast": "ollama/llama3.1:8b",
+    "nano": "ollama/llama3.1:8b",
+    "embedding": "openai/text-embedding-3-small"
+  }
+}
+```
+
+```bash
+export OPENAI_API_KEY=sk-...
+```
 
 ## Logs & UI
 
