@@ -56,6 +56,7 @@ const deleteDocInputSchema = z.object({
 export const createDeleteDocTool = (
   docsPath: string,
   qdrantClient: QdrantClient,
+  collectionName: string,
 ) => ({
   description: "delete an entire documentation file (use with caution)",
   execute: async ({ path, confirm }: z.infer<typeof deleteDocInputSchema>) => {
@@ -73,7 +74,7 @@ export const createDeleteDocTool = (
       await unlink(fullPath)
 
       // remove from index
-      await deleteDocChunks(qdrantClient, path)
+      await deleteDocChunks(qdrantClient, path, collectionName)
 
       return {
         message: `deleted doc at ${path}`,

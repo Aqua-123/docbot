@@ -18,6 +18,7 @@ export const createRenameDocTool = (
   docsPath: string,
   docIndex: DocIndex,
   qdrantClient: QdrantClient,
+  collectionName: string,
 ) => ({
   description: "rename or move a documentation file to a new path",
   execute: async ({
@@ -35,7 +36,7 @@ export const createRenameDocTool = (
       await rename(oldFullPath, newFullPath)
 
       // remove old index entries
-      await deleteDocChunks(qdrantClient, oldPath)
+      await deleteDocChunks(qdrantClient, oldPath, collectionName)
 
       // index at new location
       await docIndex.indexFile(newFullPath)

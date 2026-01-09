@@ -20,6 +20,7 @@ export function createDocTools(
   docsPath: string,
   docIndex: DocIndex,
   qdrantClient: QdrantClient,
+  collectionName: string,
 ) {
   return {
     add_section: createAddSectionTool(docsPath, docIndex),
@@ -27,7 +28,7 @@ export function createDocTools(
     check_coverage: createCheckCoverageTool(docsPath, docIndex),
     consolidate_docs: createConsolidateDocsTool(docsPath, docIndex),
     create_doc: createDocTool(docsPath, docIndex),
-    delete_doc: createDeleteDocTool(docsPath, qdrantClient),
+    delete_doc: createDeleteDocTool(docsPath, qdrantClient, collectionName),
     delete_section: createDeleteSectionTool(docsPath, docIndex),
     get_doc_outline: createGetOutlineTool(docsPath),
     move_content: createMoveContentTool(docsPath, docIndex),
@@ -35,7 +36,7 @@ export function createDocTools(
     read_doc: createReadDocTool(docsPath),
     read_nav: createReadNavTool(docsPath),
     register_nav: createRegisterNavTool(docsPath),
-    rename_doc: createRenameDocTool(docsPath, docIndex, qdrantClient),
+    rename_doc: createRenameDocTool(docsPath, docIndex, qdrantClient, collectionName),
     search_docs: createSearchDocsTool(docIndex),
     search_mintlify: createSearchMintlifyTool(),
     update_nav: createUpdateNavTool(docsPath),

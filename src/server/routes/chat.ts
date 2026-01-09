@@ -18,7 +18,12 @@ import type { AppContext } from "../context"
  * reuses the same blackboard (SQLite session) across requests when sessionId is provided.
  */
 export function createChatRoute(ctx: AppContext) {
-  const docTools = createDocTools(ctx.docsPath, ctx.docIndex, ctx.qdrantClient)
+  const docTools = createDocTools(
+    ctx.docsPath,
+    ctx.docIndex,
+    ctx.qdrantClient,
+    ctx.runtimeConfig.qdrant.collections.docs.name,
+  )
   const codebaseTools =
     ctx.codebasePaths.length > 0
       ? createCodebaseTools(ctx.codebasePaths, ctx.codeIndex)
@@ -56,7 +61,7 @@ export function createChatRoute(ctx: AppContext) {
         // create blackboard instance for this session (reuses existing DB if present)
         const blackboard = new Blackboard(dbPath, sessionId)
 
-        // create orchestrator with blackboard and tools
+        // create orchestrator with blackboard, tools, and runtime config
         const orchestrator = createOrchestratorAgent(
           blackboard,
           {
@@ -68,6 +73,7 @@ export function createChatRoute(ctx: AppContext) {
             docTools,
             interactionTools,
           },
+          ctx.runtimeConfig,
         )
 
         // use createAgentUIStreamResponse - handles validation + streaming
