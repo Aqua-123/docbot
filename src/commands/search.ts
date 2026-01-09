@@ -92,6 +92,7 @@ export const searchCommand: CommandModule<object, SearchArgs> = {
       qdrantClient,
       docsPath,
       runtimeConfig.qdrant.collections.docs.name,
+      runtimeConfig.models.embedding,
     )
 
     // search

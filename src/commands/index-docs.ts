@@ -98,14 +98,16 @@ function createIndexes(
     qdrantClient,
     docsPath,
     runtimeConfig.qdrant.collections.docs.name,
+    runtimeConfig.models.embedding,
   )
   const codeIndex =
     codebasePaths.length > 0
       ? new CodeIndex(
           qdrantClient,
           codebasePaths,
-          docsPath,
           runtimeConfig.qdrant.collections.code.name,
+          runtimeConfig.models.embedding,
+          docsPath,
         )
       : null
 

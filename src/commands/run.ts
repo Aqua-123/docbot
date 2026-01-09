@@ -331,12 +331,14 @@ export const runCommand: CommandModule<object, RunArgs> = {
       qdrantClient,
       docsPath,
       runtimeConfig.qdrant.collections.docs.name,
+      runtimeConfig.models.embedding,
     )
     const codeIndex = new CodeIndex(
       qdrantClient,
       codebasePaths,
-      docsPath,
       runtimeConfig.qdrant.collections.code.name,
+      runtimeConfig.models.embedding,
+      docsPath,
     )
 
     const docStats = await syncDocsIndex(docIndex, manifest, manifestPath)
@@ -354,7 +356,7 @@ export const runCommand: CommandModule<object, RunArgs> = {
       process.exit(0)
     }
 
-    const ctx = createAppContext(qdrantClient, docIndex, codeIndex, {
+    const ctx = createAppContext(runtimeConfig, qdrantClient, docIndex, codeIndex, {
       codebasePaths,
       docsPath,
       interactive: args.interactive,
